@@ -21,7 +21,7 @@ class StackTest < Minitest::Test
     @stack.push!(1)
     @stack.pop!
 
-    assert(@stack.size.empty?)
+    assert(@stack.empty?)
   end
 
   def test_is_should_have_size
