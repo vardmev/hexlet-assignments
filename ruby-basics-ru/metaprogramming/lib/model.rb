@@ -3,43 +3,55 @@
 # BEGIN
 module Model
   def initialize(params = {})
-    @id, @title, @body, @created_at, @published = params[:id], params[:title], params[:body], params[:created_at], params[:published]
+    @attributes = {}
+    self.class.attr_options.each do |name, options|
+      value = params.key?(name) ? params[name] : options.fetch(:default, nil)
+      write_attribute(name, value)
+    end
+  end
+
+  def write_attribute(name, value)
+    options = self.class.attr_options[name]
+    @attributes[name] = self.class.convert(value, options[:type])
   end
 
   def self.included(base)
+    base.attr_reader :attributes
     base.extend(ClassMethods)
   end
 
   module ClassMethods
+    def attr_options
+      @attr_options || {}
+    end
+
     def attribute(name, options = {})
+      @attr_options ||= {}
+      @attr_options[name] = options
+
       define_method name do
-        res = instance_variable_get "@#{name}"
-        return if res.nil?
-
-        if options[:type]
-          res = case options[:type]
-                when :integer
-                  res.to_i
-                when :string
-                  res.to_s
-                when :boolean
-                  res
-                when :datetime
-                  DateTime.parse(res)
-                end
-        end
-
-        res
+        @attributes[name]
       end
 
       define_method "#{name}=" do |value|
-        instance_variable_set "@#{name}", value
+        write_attribute(name, value)
       end
     end
-  end
 
-  def attributes
-    { id: id, title: title, body: body, created_at: created_at, published: published }
+    def convert(value, type)
+      return value if value.nil?
+
+      case type
+      when :integer
+        value.to_i
+      when :string
+        value.to_s
+      when :boolean
+        !!value
+      when :datetime
+        DateTime.parse(value)
+      end
+    end
   end
 end
 # END
